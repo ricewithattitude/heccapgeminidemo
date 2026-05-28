@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Voice of Customer — Quarterly Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+<style>
+  :root {
+    --bg: #F7F6F3;
+    --surface: #FFFFFF;
+    --text: #2F3437;
+    --text-soft: #4A4A47;
+    --muted: #7A7670;
+    --border: #E6E2D9;
+    --border-strong: #D6D1C5;
+    --pos: #4A8B47;
+    --pos-soft: rgba(74, 139, 71, 0.10);
+    --neg: #B84444;
+    --neu: #C5C0B3;
+    --anchor: #2F3437;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: "ss01", "cv11";
+  }
+
+  /* Subtle grain — breaks pure flat surfaces */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 999;
+    opacity: 0.025;
+    mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  }
+
+  .serif { font-family: "Instrument Serif", Georgia, Cambria, serif; font-weight: 400; }
+  .muted { color: var(--muted); }
+  .nums { font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1, "cv11" 1; }
+
+  .container {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 72px 40px 80px;
+  }
+
+  /* ─────────────  Header  ───────────── */
+  header { margin-bottom: 60px; }
+  .eyebrow {
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 28px;
+    font-weight: 500;
+  }
+  .title-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 32px;
+    flex-wrap: wrap;
+  }
+  h1.title {
+    font-family: "Instrument Serif", Georgia, serif;
+    font-size: 64px;
+    font-weight: 400;
+    font-style: italic;
+    letter-spacing: -0.025em;
+    line-height: 1.0;
+    margin: 0;
+    color: var(--text);
+    text-wrap: balance;
+    max-width: 12ch;
+  }
+  .title-meta {
+    text-align: right;
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.7;
+    letter-spacing: 0.02em;
+  }
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 11.5px;
+    color: var(--pos);
+    background: var(--pos-soft);
+    padding: 4px 11px 4px 9px;
+    border-radius: 999px;
+    letter-spacing: 0.02em;
+    font-weight: 500;
+  }
+  .badge .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--pos);
+    box-shadow: 0 0 0 0 rgba(74, 139, 71, 0.5);
+    animation: pulse 2.4s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(74, 139, 71, 0.4); }
+    50%      { box-shadow: 0 0 0 4px rgba(74, 139, 71, 0); }
+  }
+
+  /* ─────────────  KPI strip (editorial)  ───────────── */
+  .kpi-strip {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr 1fr;
+    gap: 0;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 64px;
+  }
+  .kpi {
+    padding: 28px 36px 28px 0;
+    position: relative;
+  }
+  .kpi + .kpi {
+    padding-left: 36px;
+    border-left: 1px solid var(--border);
+  }
+  .kpi-value {
+    font-family: "Instrument Serif", Georgia, serif;
+    font-size: 56px;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    margin-bottom: 14px;
+    font-feature-settings: "tnum" 1;
+  }
+  .kpi-label {
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    font-weight: 500;
+  }
+  .kpi-sub {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 4px;
+    font-style: italic;
+    font-family: "Instrument Serif", Georgia, serif;
+  }
+
+  /* ─────────────  Section headers  ───────────── */
+  .section-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 18px;
+  }
+  .section-label {
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    color: var(--muted);
+    text-transform: uppercase;
+    font-weight: 500;
+    margin: 0;
+  }
+  .section-hint {
+    font-size: 12px;
+    color: var(--muted);
+    font-style: italic;
+    font-family: "Instrument Serif", Georgia, serif;
+  }
+
+  /* ─────────────  Provider pills  ───────────── */
+  .pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 56px;
+  }
+  .pill {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-soft);
+    padding: 7px 14px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-family: inherit;
+    font-weight: 400;
+    cursor: pointer;
+    transition: border-color 180ms ease, background 180ms ease, color 180ms ease, transform 120ms ease;
+    letter-spacing: 0.01em;
+  }
+  .pill:hover {
+    border-color: var(--border-strong);
+    color: var(--text);
+  }
+  .pill:active { transform: translateY(1px); }
+  .pill:focus-visible {
+    outline: 2px solid var(--anchor);
+    outline-offset: 2px;
+  }
+  .pill.active {
+    background: var(--anchor);
+    color: #F7F6F3;
+    border-color: var(--anchor);
+  }
+
+  /* ─────────────  Cards  ───────────── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 32px;
+  }
+  .card-title {
+    font-family: "Instrument Serif", Georgia, serif;
+    font-size: 22px;
+    font-weight: 400;
+    margin: 0 0 4px;
+    color: var(--text);
+    letter-spacing: -0.005em;
+  }
+  .card-subtitle {
+    font-size: 12.5px;
+    color: var(--muted);
+    margin: 0 0 24px;
+    letter-spacing: 0.01em;
+  }
+
+  /* ─────────────  Chart row  ───────────── */
+  .chart-grid {
+    display: grid;
+    grid-template-columns: 1.05fr 1fr;
+    gap: 16px;
+    margin-bottom: 60px;
+  }
+
+  /* Sentiment bar */
+  .stacked-bar {
+    display: flex;
+    width: 100%;
+    height: 38px;
+    margin: 36px 0 24px;
+    gap: 2px;
+  }
+  .stacked-bar .seg {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #FFFFFF;
+    font-size: 12.5px;
+    font-weight: 500;
+    transition: width 480ms cubic-bezier(0.22, 1, 0.36, 1);
+    border-radius: 2px;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.01em;
+  }
+  .seg-neu { color: var(--text) !important; }
+  .legend {
+    display: flex;
+    gap: 22px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .legend-item { display: inline-flex; align-items: center; gap: 8px; }
+  .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+  /* Donut */
+  .donut-wrap {
+    position: relative;
+    height: 260px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 6px;
+  }
+  .donut-wrap canvas { max-height: 260px; }
+  .donut-center {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    pointer-events: none;
+  }
+  .donut-center .pct {
+    font-family: "Instrument Serif", Georgia, serif;
+    font-size: 38px;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+  }
+  .donut-center .topic-name {
+    font-size: 10.5px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    margin-top: 8px;
+    max-width: 130px;
+    font-weight: 500;
+  }
+
+  /* ─────────────  Reviews (editorial pull-quotes)  ───────────── */
+  .reviews-grid {
+    display: grid;
+    grid-template-columns: 1.15fr 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 60px;
+  }
+  .review {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 28px 28px 24px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 200px;
+    position: relative;
+  }
+  .review .quote-mark {
+    font-family: "Instrument Serif", Georgia, serif;
+    font-style: italic;
+    font-size: 56px;
+    color: var(--border-strong);
+    line-height: 0.4;
+    margin-bottom: 14px;
+    height: 18px;
+  }
+  .review-text {
+    font-family: "Instrument Serif", Georgia, serif;
+    font-style: italic;
+    font-size: 19px;
+    line-height: 1.45;
+    margin: 0 0 24px;
+    color: var(--text);
+    letter-spacing: -0.005em;
+    text-wrap: pretty;
+  }
+  .review-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    padding-top: 14px;
+    border-top: 1px solid var(--border);
+  }
+  .tag {
+    color: var(--text);
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    font-size: 11.5px;
+  }
+  .tag-dot {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: var(--muted);
+    display: inline-block;
+  }
+  .sent {
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-size: 10.5px;
+    font-weight: 500;
+  }
+  .sent-pos { color: var(--pos); }
+  .sent-neg { color: var(--neg); }
+  .sent-neu { color: var(--muted); }
+
+  /* ─────────────  Live scoring  ───────────── */
+  .score-row {
+    display: flex;
+    gap: 8px;
+    margin: 8px 0 22px;
+  }
+  .score-input {
+    flex: 1;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    padding: 13px 16px;
+    font-size: 14px;
+    font-family: inherit;
+    color: var(--text);
+    border-radius: 4px;
+    outline: none;
+    transition: border-color 180ms ease, background 180ms ease;
+  }
+  .score-input::placeholder { color: var(--muted); font-style: italic; }
+  .score-input:focus {
+    border-color: var(--anchor);
+    background: var(--surface);
+  }
+  .score-btn {
+    background: var(--anchor);
+    color: #F7F6F3;
+    border: 1px solid var(--anchor);
+    padding: 0 24px;
+    font-size: 13px;
+    cursor: pointer;
+    border-radius: 4px;
+    font-family: inherit;
+    letter-spacing: 0.02em;
+    font-weight: 500;
+    transition: background 180ms ease, transform 100ms ease;
+  }
+  .score-btn:hover { background: #1d2022; }
+  .score-btn:active { transform: translateY(1px); }
+  .score-btn:focus-visible { outline: 2px solid var(--anchor); outline-offset: 2px; }
+
+  .score-result {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    padding: 22px 24px;
+    border-radius: 4px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .score-value {
+    font-family: "Instrument Serif", Georgia, serif;
+    font-size: 38px;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+  }
+  .score-caption {
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--muted);
+    margin-top: 8px;
+    font-weight: 500;
+  }
+  .score-verdict {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    font-weight: 500;
+  }
+
+  /* ─────────────  Topic library  ───────────── */
+  .topics-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 40px;
+    margin-top: 8px;
+  }
+  .topic-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border);
+    transition: padding-left 200ms ease;
+  }
+  .topic-row:nth-last-child(-n+2) { border-bottom: none; }
+  .topic-row:hover { padding-left: 6px; }
+  .topic-left { display: inline-flex; align-items: baseline; gap: 18px; }
+  .topic-id {
+    font-family: "Instrument Serif", Georgia, serif;
+    color: var(--muted);
+    font-size: 14px;
+    min-width: 16px;
+    font-variant-numeric: tabular-nums;
+  }
+  .topic-name { font-size: 14px; color: var(--text); }
+  .live-chip {
+    color: var(--muted);
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .live-chip::before {
+    content: "";
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--pos);
+    opacity: 0.7;
+  }
+
+  /* ─────────────  Section gaps  ───────────── */
+  section { margin-bottom: 60px; }
+  section:last-of-type { margin-bottom: 0; }
+
+  /* ─────────────  Footer  ───────────── */
+  hr.hairline {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 56px 0 24px;
+  }
+  footer {
+    font-size: 11.5px;
+    color: var(--muted);
+    text-align: center;
+    letter-spacing: 0.04em;
+    font-style: italic;
+    font-family: "Instrument Serif", Georgia, serif;
+  }
+
+  /* ─────────────  Responsive trim  ───────────── */
+  @media (max-width: 820px) {
+    .container { padding: 48px 24px 64px; }
+    h1.title { font-size: 44px; }
+    .kpi-strip { grid-template-columns: 1fr; }
+    .kpi + .kpi { border-left: none; border-top: 1px solid var(--border); padding-left: 0; }
+    .chart-grid, .reviews-grid { grid-template-columns: 1fr; }
+    .title-row { flex-direction: column; align-items: flex-start; }
+    .title-meta { text-align: left; }
+  }
+</style>
+</head>
+<body>
+<main class="container">
+
+  <!-- 1. Header -->
+  <header>
+    <div class="eyebrow">Voice of Customer — Quarterly Dashboard</div>
+    <div class="title-row">
+      <h1 class="title">French residential energy market.</h1>
+      <div class="title-meta">
+        <span class="badge"><span class="dot"></span>Last refresh · 2 hours ago</span>
+        <div style="margin-top:10px">Jan 2022 — Dec 2025 · 10 supplier brands</div>
+      </div>
+    </div>
+  </header>
+
+  <!-- 2. KPI strip -->
+  <section class="kpi-strip" aria-label="Headline metrics">
+    <div class="kpi">
+      <div class="kpi-value">37,294</div>
+      <div class="kpi-label">Reviews analyzed</div>
+      <div class="kpi-sub">across four years</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-value">66<span style="font-size:0.55em">%</span></div>
+      <div class="kpi-label">Positive sentiment</div>
+      <div class="kpi-sub">share of mentions</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-value">20<span style="font-size:0.55em">%</span></div>
+      <div class="kpi-label">Negative sentiment</div>
+      <div class="kpi-sub">share of mentions</div>
+    </div>
+  </section>
+
+  <!-- 3. Provider selector -->
+  <section>
+    <div class="section-head">
+      <div class="section-label">Select a provider</div>
+      <div class="section-hint">click to refresh the panels below</div>
+    </div>
+    <div class="pills" id="pills" role="tablist"></div>
+  </section>
+
+  <!-- 4. Two charts -->
+  <section class="chart-grid">
+    <article class="card">
+      <h2 class="card-title">Sentiment breakdown</h2>
+      <p class="card-subtitle" id="sentiment-subtitle">Share of mentions</p>
+      <div class="stacked-bar" id="stacked-bar"></div>
+      <div class="legend">
+        <span class="legend-item"><span class="legend-dot" style="background:var(--pos)"></span>Positive</span>
+        <span class="legend-item"><span class="legend-dot" style="background:var(--neu)"></span>Neutral</span>
+        <span class="legend-item"><span class="legend-dot" style="background:var(--neg)"></span>Negative</span>
+      </div>
+    </article>
+    <article class="card">
+      <h2 class="card-title">Topic mix</h2>
+      <p class="card-subtitle" id="donut-subtitle">Top topic anchors the distribution</p>
+      <div class="donut-wrap">
+        <canvas id="donut"></canvas>
+        <div class="donut-center">
+          <div class="pct nums" id="donut-pct">50%</div>
+          <div class="topic-name" id="donut-name">Heating visits</div>
+        </div>
+      </div>
+    </article>
+  </section>
+
+  <!-- 5. Review snippets -->
+  <section>
+    <div class="section-head">
+      <div class="section-label">Sample reviews</div>
+      <div class="section-hint">drawn from the latest batch</div>
+    </div>
+    <div class="reviews-grid">
+      <article class="review">
+        <div>
+          <div class="quote-mark">"</div>
+          <p class="review-text">Service impeccable, conseiller compétent.</p>
+        </div>
+        <div class="review-meta">
+          <span class="tag" data-provider-tag>ilek</span>
+          <span class="tag-dot"></span>
+          <span class="sent sent-pos">Positive</span>
+        </div>
+      </article>
+      <article class="review">
+        <div>
+          <div class="quote-mark">"</div>
+          <p class="review-text">Factures incompréhensibles, je n'arrive jamais à les vérifier.</p>
+        </div>
+        <div class="review-meta">
+          <span class="tag" data-provider-tag>ilek</span>
+          <span class="tag-dot"></span>
+          <span class="sent sent-neg">Negative · Billing</span>
+        </div>
+      </article>
+      <article class="review">
+        <div>
+          <div class="quote-mark">"</div>
+          <p class="review-text">Souscription correcte, rien à signaler.</p>
+        </div>
+        <div class="review-meta">
+          <span class="tag" data-provider-tag>ilek</span>
+          <span class="tag-dot"></span>
+          <span class="sent sent-neu">Neutral</span>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <!-- 6. Live sentiment scoring -->
+  <section class="card">
+    <h2 class="card-title">Live sentiment scoring</h2>
+    <p class="card-subtitle">Type a French sentence to test the scoring model in real time</p>
+    <div class="score-row">
+      <input class="score-input" id="score-input" placeholder="Paste a French sentence…" autocomplete="off" aria-label="French sentence to score" />
+      <button class="score-btn" id="score-btn" type="button">Score</button>
+    </div>
+    <div class="score-result">
+      <div>
+        <div class="score-value" id="score-value">—</div>
+        <div class="score-caption">Compound score</div>
+      </div>
+      <div class="score-verdict muted" id="score-verdict">Awaiting input</div>
+    </div>
+  </section>
+
+  <!-- 7. Topic library -->
+  <section class="card">
+    <h2 class="card-title">Topic library</h2>
+    <p class="card-subtitle">Ten LDA topics covering the residential energy domain</p>
+    <div class="topics-grid" id="topics-grid"></div>
+  </section>
+
+  <hr class="hairline">
+  <footer>Prototype · LDA topic model + Vader sentiment scoring · Pipeline refreshes monthly</footer>
+</main>
+
+<script>
+  // ──────────────  Data  ──────────────
+  const providers = [
+    { name: "ilek",          pos: 84, neg: 8,  top: 8 },
+    { name: "OhmEnergie",    pos: 82, neg: 9,  top: 7 },
+    { name: "happ-e",        pos: 70, neg: 11, top: 0 },
+    { name: "Ekwateur",      pos: 72, neg: 19, top: 5 },
+    { name: "EDF",           pos: 64, neg: 13, top: 7 },
+    { name: "Engie",         pos: 62, neg: 26, top: 8 },
+    { name: "TotalEnergies", pos: 66, neg: 23, top: 2 },
+    { name: "ENI",           pos: 51, neg: 35, top: 2 },
+    { name: "Alpiq",         pos: 51, neg: 49, top: 1 },
+    { name: "Sowee",         pos: 64, neg: 28, top: 4 }
+  ];
+
+  const topics = [
+    "Phone advice",
+    "Technical project",
+    "Billing & payment",
+    "Generic feedback",
+    "Switching providers",
+    "Easy sign-up",
+    "Solar panels",
+    "Friendly advisors",
+    "Heating visits",
+    "Pricing & tariffs"
+  ];
+
+  // Disciplined monochrome palette for the donut — top topic dark, rest as one warm grey
+  // with slight tonal variation, not a rainbow.
+  const otherPalette = [
+    "#DDD8CC", "#D4CEC0", "#CBC4B4", "#C2BAA8",
+    "#B9B09C", "#B0A690", "#A79C84", "#9E9278", "#95886C"
+  ];
+
+  let selected = 0;
+  let donutChart = null;
+
+  // ──────────────  Provider pills  ──────────────
+  const pillsEl = document.getElementById("pills");
+  providers.forEach((p, i) => {
+    const btn = document.createElement("button");
+    btn.className = "pill" + (i === 0 ? " active" : "");
+    btn.textContent = p.name;
+    btn.type = "button";
+    btn.setAttribute("role", "tab");
+    btn.setAttribute("aria-selected", i === 0 ? "true" : "false");
+    btn.addEventListener("click", () => {
+      selected = i;
+      document.querySelectorAll(".pill").forEach((el, j) => {
+        const on = (j === i);
+        el.classList.toggle("active", on);
+        el.setAttribute("aria-selected", on ? "true" : "false");
+      });
+      render();
+    });
+    pillsEl.appendChild(btn);
+  });
+
+  // ──────────────  Topic library  ──────────────
+  const topicsGrid = document.getElementById("topics-grid");
+  topics.forEach((t, i) => {
+    const row = document.createElement("div");
+    row.className = "topic-row";
+    row.innerHTML =
+      '<div class="topic-left">' +
+        '<span class="topic-id">' + String(i).padStart(2, "0") + '</span>' +
+        '<span class="topic-name">' + t + '</span>' +
+      '</div>' +
+      '<span class="live-chip">live</span>';
+    topicsGrid.appendChild(row);
+  });
+
+  // ──────────────  Render  ──────────────
+  function render() {
+    const p = providers[selected];
+    const pos = p.pos;
+    const neg = p.neg;
+    const neu = 100 - pos - neg;
+
+    // Sentiment bar
+    const bar = document.getElementById("stacked-bar");
+    bar.innerHTML =
+      '<div class="seg"          style="background:var(--pos);width:' + pos + '%">' + pos + '%</div>' +
+      '<div class="seg seg-neu"  style="background:var(--neu);width:' + neu + '%">' + neu + '%</div>' +
+      '<div class="seg"          style="background:var(--neg);width:' + neg + '%">' + neg + '%</div>';
+    document.getElementById("sentiment-subtitle").textContent =
+      p.name + " · share of mentions";
+
+    // Donut
+    const otherShare = 50 / 9;
+    const data = topics.map((_, i) => i === p.top ? 50 : otherShare);
+    const othersIdx = [];
+    topics.forEach((_, i) => { if (i !== p.top) othersIdx.push(i); });
+    const colors = topics.map((_, i) => {
+      if (i === p.top) return "#2F3437";
+      return otherPalette[othersIdx.indexOf(i) % otherPalette.length];
+    });
+
+    const ctx = document.getElementById("donut").getContext("2d");
+    if (donutChart) donutChart.destroy();
+    donutChart = new Chart(ctx, {
+      type: "doughnut",
+      data: {
+        labels: topics.map((t, i) => String(i).padStart(2, "0") + " · " + t),
+        datasets: [{
+          data: data,
+          backgroundColor: colors,
+          borderColor: "#FFFFFF",
+          borderWidth: 3,
+          hoverOffset: 6,
+          hoverBorderColor: "#FFFFFF"
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: "70%",
+        animation: { duration: 420, easing: "easeOutCubic" },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: "#2F3437",
+            titleFont: { family: "Instrument Serif, Georgia, serif", size: 14, weight: "normal", style: "italic" },
+            bodyFont: { family: "Geist, system-ui, sans-serif", size: 12 },
+            padding: 12,
+            displayColors: false,
+            cornerRadius: 4,
+            callbacks: {
+              label: (ctx) => ctx.parsed.toFixed(1) + "%"
+            }
+          }
+        }
+      }
+    });
+
+    document.getElementById("donut-pct").textContent = "50%";
+    document.getElementById("donut-name").textContent = topics[p.top];
+    document.getElementById("donut-subtitle").textContent =
+      p.name + " · top topic anchors the distribution";
+
+    // Provider tag on each review
+    document.querySelectorAll("[data-provider-tag]").forEach(el => {
+      el.textContent = p.name;
+    });
+  }
+
+  // ──────────────  Sentiment scoring  ──────────────
+  const lexicon = {
+    excellent: 3, parfait: 3, genial: 2, ravi: 2, satisfait: 2,
+    competent: 2, professionnel: 2, agreable: 2, efficace: 2, impeccable: 3,
+    clair: 1, simple: 1, facile: 1, rapide: 1, merci: 1, bon: 1, bien: 1,
+    horrible: -3, nul: -3, arnaque: -3, catastrophique: -3, incompetent: -3,
+    decevant: -2, decu: -2, mauvais: -2, probleme: -2, impossible: -2,
+    attendre: -1, erreur: -1, jamais: -1
+  };
+
+  function stripAccents(s) {
+    return s.normalize("NFD").replace(/[̀-ͯ]/g, "");
+  }
+
+  function scoreText(text) {
+    const cleaned = stripAccents(text.toLowerCase());
+    const tokens = cleaned
+      .split(/\s+/)
+      .map(t => t.replace(/[^a-z]/g, ""))
+      .filter(Boolean);
+
+    let sum = 0;
+    tokens.forEach(t => {
+      if (lexicon[t] !== undefined) sum += lexicon[t];
+    });
+    const compound = sum / Math.sqrt(sum * sum + 15);
+
+    let label = "Neutral";
+    let cls = "sent-neu";
+    if (compound >= 0.05) { label = "Positive"; cls = "sent-pos"; }
+    else if (compound <= -0.05) { label = "Negative"; cls = "sent-neg"; }
+
+    return { compound, label, cls };
+  }
+
+  const scoreBtn = document.getElementById("score-btn");
+  const scoreInput = document.getElementById("score-input");
+  const valueEl = document.getElementById("score-value");
+  const verdictEl = document.getElementById("score-verdict");
+
+  function runScore() {
+    const text = scoreInput.value.trim();
+    if (!text) {
+      valueEl.textContent = "—";
+      verdictEl.textContent = "Awaiting input";
+      verdictEl.className = "score-verdict muted";
+      return;
+    }
+    const r = scoreText(text);
+    valueEl.textContent = (r.compound >= 0 ? "+" : "") + r.compound.toFixed(2);
+    verdictEl.textContent = r.label;
+    verdictEl.className = "score-verdict " + r.cls;
+  }
+
+  scoreBtn.addEventListener("click", runScore);
+  scoreInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") runScore();
+  });
+
+  render();
+</script>
+</body>
+</html>
